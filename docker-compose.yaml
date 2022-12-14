@@ -1,0 +1,10 @@
+version: '3'
+services:
+  api:
+    build: .
+    container_name: "technical-assessment-elyadata"
+    volumes:
+      - ./:/usr/src/application:ro
+    ports:
+      - 8000:8000
+

@@ -1,0 +1,4 @@
+fastapi==0.88.0
+uvicorn==0.20.0
+pymongo==4.3.3
+selenium==4.7.2
