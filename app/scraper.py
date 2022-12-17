@@ -12,7 +12,7 @@ The scrapping method is the same, the difference comes to the HTML selectors
 
 '''
 
-def scrape_old_structure_page(driver, max_post_to_extract, data):
+def scrape_old_structure_page(driver, max_post_to_extract, data, verbose):
 
     '''
     
@@ -26,17 +26,20 @@ def scrape_old_structure_page(driver, max_post_to_extract, data):
     try :
         data['About']=driver.find_element(By.XPATH,'//div/div[1]/div/div[3]/div/div/div/div[1]/div[1]/div/div/div[4]/div[2]/div/div[1]/div[2]/div/div[1]/div/div/div/div/div[2]/div[1]').text
     except:
-        print('Intro not found')
+        if verbose :
+            print('Intro not found')
     try :
         followers = driver.find_element(By.PARTIAL_LINK_TEXT,'followers').text
-        data['followers'] = followers
+        data['followers'] = value_to_float(followers.split(' ')[0])
     except :
-        print('No data for followers')
+        if verbose :
+            print('No data for followers')
     try :
         likes = driver.find_element(By.PARTIAL_LINK_TEXT,'likes').text
-        data['likes'] = likes
+        data['likes'] = value_to_float(likes.split(' ')[0])
     except :
-        print('No data for likes')
+        if verbose :
+            print('No data for likes')
 
 
     ##### Go to About section then scrape infos ###########
@@ -55,7 +58,8 @@ def scrape_old_structure_page(driver, max_post_to_extract, data):
                 for element in elements:
                     data[title].append(element.text)
     except :
-        print("No data from About section")
+        if verbose :
+            print("No data from About section")
 
     ######### back to home #########
     driver.find_element(By.LINK_TEXT,"Posts").click()
@@ -72,14 +76,16 @@ def scrape_old_structure_page(driver, max_post_to_extract, data):
             driver.execute_script('arguments[0].scrollIntoView();', post)
             data['posts'].append(extract_post_infos(post))
             extracted_posts+=1
-            print(f'POST N°{extracted_posts} SCRAPED')
+            if verbose :
+                print(f'POST N°{extracted_posts} SCRAPED')
         except:
-            print('No more posts')
+            if verbose :
+                print('No more posts')
             break
 
     return data
 
-def scrape_new_structure_page(driver, max_post_to_extract, data):
+def scrape_new_structure_page(driver, max_post_to_extract, data, verbose):
 
     '''
     
@@ -100,17 +106,19 @@ def scrape_new_structure_page(driver, max_post_to_extract, data):
     for general_data in general:
         general_data = general_data.text
         if "like" in general_data: 
-            data["likes"] = ''.join([s for s in general_data if s.isdigit()])
-        elif "follower" in general_data: 
-            data["followers"] = ''.join([s for s in general_data if s.isdigit()])
+            data["likes"] = int(''.join([s for s in general_data if s.isdigit()]))
+        elif "follow" in general_data: 
+            data["followers"] = int(''.join([s for s in general_data if s.isdigit()]))
         elif "checked" in general_data:
-            data["checks"] = ''.join([s for s in general_data if s.isdigit()])
+            data["checks"] = int(''.join([s for s in general_data if s.isdigit()]))
         else:
             data['Category'] = general_data
     data['Contact info'] = [contact_data.text for contact_data in contact_info]
+    if len(data['Contact info']) ==1 :
+        data['Contact info'] = data['Contact info'][0]
     for infos in more_info:
         title = infos.find_element(By.CSS_SELECTOR,"span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6").text
-        data[title]=infos.find_element(By.CSS_SELECTOR,'span > div.x78zum5.xdt5ytf.xz62fqu.x16ldp7u > div.xu06os2.x1ok221b > span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x10flsy6.x6prxxf.xvq8zen.xo1l8bm.xzsf02u.x1yc453h').text
+        data[title]=infos.find_element(By.CSS_SELECTOR,'span > div.x78zum5.xdt5ytf.xz62fqu.x16ldp7u > div.xu06os2.x1ok221b > span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x10flsy6.x6prxxf.xvq8zen.xo1l8bm.xzsf02u.x1yc453h').text.strip()
         if "See more" in data[title]:
             try:
                 button = infos.find_element(By.CSS_SELECTOR,"div.xzsf02u.x1s688f")
@@ -136,9 +144,11 @@ def scrape_new_structure_page(driver, max_post_to_extract, data):
             driver.execute_script('arguments[0].scrollIntoView();', post)
             data['posts'].append(extract_post_infos(post))
             extracted_posts+=1
-            print(f'POST N°{extracted_posts} SCRAPED')
+            if verbose :    
+                print(f'POST N°{extracted_posts} SCRAPED')
         except:
-            print('No more posts')
+            if verbose :
+                print('No more posts')
             break 
     return data
 
@@ -150,9 +160,9 @@ def extract_post_infos(post):
     Extract post infos (description, publication date, number of likes, comments and shares)
 
     '''
-    num_comments = '0'
-    num_likes = '0'
-    num_shares = '0'
+    num_comments = 0
+    num_likes = 0
+    num_shares = 0
     date = None 
     text = None
 
@@ -174,9 +184,9 @@ def extract_post_infos(post):
     try :
         likes_comments_shares = post.find_element(By.CSS_SELECTOR,'div.x6s0dn4.xi81zsa.x78zum5.x6prxxf.x13a6bvl.xvq8zen.xdj266r.xktsk01.xat24cr.x1d52u69.x889kno.x4uap5.x1a8lsjc.xkhd6sd.xdppsyt').text.split('\n')
         for elem in likes_comments_shares:
-            if 'comment' in elem or 'comments' in elem: num_comments = elem
-            elif 'share' in elem or 'shares' in elem: num_shares = elem
-            else : num_likes = elem
+            if 'comment' in elem or 'comments' in elem: num_comments = value_to_float(elem.split(' ')[0])
+            elif 'share' in elem or 'shares' in elem: num_shares = value_to_float(elem.split(' ')[0])
+            else : num_likes = value_to_float(elem.split(' ')[0])
     except:
         pass
 
@@ -224,6 +234,22 @@ def reformulate_date(date):
         return date
 
 
+def value_to_float(x):
+    if type(x) == int:
+        return x
+    if 'K' in x:
+        if len(x) > 1:
+            return int(x.replace('K', '')) * 1000
+        return 1000
+    if 'M' in x:
+        if len(x) > 1:
+            return int(x.replace('M', '')) * 1000000
+        return 1000000
+    if 'B' in x:
+        return int(x.replace('B', '')) * 1000000000
+    return 0
+
+
 
 
 ####################################################################
@@ -231,7 +257,7 @@ def reformulate_date(date):
 #                            main                                  #
 #                                                                  #
 ####################################################################
-def scrape_facebook_page(URL, max_post_to_extract:int =-1, max_sec:int = 5):
+def scrape_facebook_page(URL, max_post_to_extract:int =-1, max_sec:int = 5, verbose:int = 1):
 
     '''
     
@@ -264,27 +290,21 @@ def scrape_facebook_page(URL, max_post_to_extract:int =-1, max_sec:int = 5):
     driver.get(URL)
 
 
-    ############# Extract ID from DOM HTML. (If not found, random id will be generated by the database)
-    
-    try :
-        id_ = driver.find_element(By.CSS_SELECTOR,'body > script:nth-child(14)').get_attribute('innerHTML')
-        first_index = id_.find("page_id")
-        last_index = id_[first_index:].find('",')
-        data['_id'] = id_[first_index+10:first_index+last_index]
-    except:
-        print('Random id will be generated by the database')
+    data['_id'] = URL.split('/')[3] #id 
 
-    ###### 2 structures differs from their Home/Posts button
 
     find_structure = driver.find_element(By.XPATH,'//a[@class="x1i10hfl x6umtig x1b1mbwd xaqea5y xav7gou xe8uvvx xggy1nq x1o1ewxj x3x9cwd x1e5q0jg x13rtm0m x87ps6o x1lku1pv x1a2a7pz xjyslct xjbqb8w x18o3ruo x13fuv20 xu3j5b3 x1q0q8m5 x26u7qi x972fbf xcfux6l x1qhh985 xm0m39n x9f619 x1heor9g x1ypdohk xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x1n2onr6 x16tdsg8 x1hl2dhg x1vjfegm x3nfvp2 xrbpyxo xng8ra x16dsc37"]').text
     if (find_structure=='Home'):
-        data = scrape_new_structure_page(driver, max_post_to_extract, data)
+        data = scrape_new_structure_page(driver, max_post_to_extract, data, verbose)
     elif(find_structure=='Posts'):
-        data = scrape_old_structure_page(driver, max_post_to_extract, data)
+        data = scrape_old_structure_page(driver, max_post_to_extract, data, verbose)
     else:  
         raise Exception('Unkown structure')
-
+        
+    driver.quit()
     return data
+
+
 
 
 

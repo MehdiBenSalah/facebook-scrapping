@@ -7,4 +7,3 @@ services:
       - ./:/usr/src/application:ro
     ports:
       - 8000:8000
-
